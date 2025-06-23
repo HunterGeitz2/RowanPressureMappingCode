@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Pressure Map Viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-bottom: 20px;
+    }
+
+    img {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    h3 {
+      margin-bottom: 12px;
+      color: #34495e;
+    }
+
+    #timestamp, #stats {
+      font-size: 16px;
+      margin-top: 10px;
+      color: #555;
+    }
+
+    .box {
+      background-color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+    }
+
+    .image-box img {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Real-Time Pressure Map Upscaling (6×6 ➜ 32×32)</h2>
+
+  <div class="container">
+    <div class="box image-box">
+      <h3>Original 6×6 Input</h3>
+      <img id="inputImage" src="" alt="6x6 Input" style="image-rendering: pixelated;">
+    </div>
+    <div class="box image-box">
+      <h3>Upscaled 32×32 Output (SR-GAN)</h3>
+      <img id="outputImage" src="" alt="32x32 Output" style="image-rendering: crisp-edges;">
+    </div>
+  </div>
+
+  <div id="timestamp">Last updated: --:--:--</div>
+  <div id="stats">
+    <p><strong>Max Pressure:</strong> <span id="max-pressure">--</span></p>
+    <p><strong>Total Pressure:</strong> <span id="total-pressure">--</span></p>
+  </div>
+
+  <script>
+    function getCurrentTime() {
+      const now = new Date();
+      return now.toLocaleTimeString();
+    }
+
+    let lastPressure = 0;
+
+    async function fetchImages() {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/predict");
+        const data = await res.json();
+
+        if (data.total_force > 0 && data.total_force !== lastPressure) {
+          document.getElementById("inputImage").src = data.input_image + "?" + new Date().getTime();
+          document.getElementById("outputImage").src = data.output_image + "?" + new Date().getTime();
+          document.getElementById("timestamp").textContent = "Last updated: " + getCurrentTime();
+          document.getElementById("max-pressure").textContent = data.max_force.toFixed(2);
+          document.getElementById("total-pressure").textContent = data.total_force.toFixed(2);
+
+          lastPressure = data.total_force;
+        }
+      } catch (error) {
+        console.error("Error fetching images:", error);
+      }
+    }
+
+    setInterval(fetchImages, 1000); // Check every second, update only if pressure changes
+  </script>
+</body>
+</html>
