@@ -18,8 +18,8 @@ except ImportError:
     sys.exit(1)
 
 # Configuration
-INPUT_FOLDER = os.path.join(this_dir, "6x6_heatmaps")
-OUTPUT_FOLDER = os.path.join(this_dir, "32x32_heatmaps")
+INPUT_FOLDER = os.path.join(this_dir, "6x6_krigedheatmaps")
+OUTPUT_FOLDER = os.path.join(this_dir, "32x32_krigedheatmaps")
 
 
 def ensure_folder(path):
