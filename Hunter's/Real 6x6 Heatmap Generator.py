@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 """
-Script to generate 6×6 heatmap images for each row in `p.trial5.csv`,
-ignoring the first column of the CSV and skipping any malformed rows.
-Each remaining 36 values is reshaped into a 6×6 matrix (column-major) and saved as a PNG heatmap,
-auto‐scaled per‐image (unless you set VMIN/VMAX manually). Input and output
-paths are located relative to the script’s directory.
+Script to generate 6×6 heatmap images for each row in `extracted_6x6_grids.csv`.
+Each row (after stripping the date column) is multiplied by 100, reshaped
+column-first into a 6×6 matrix, and saved as a PNG heatmap.
 """
 import os
 import sys
 import numpy as np
+import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-GUI backend
 import matplotlib.pyplot as plt
 
-# Determine the directory this script lives in
+# Configuration
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Configuration (relative to SCRIPT_DIR)
-INPUT_FILE = os.path.join(SCRIPT_DIR, "p.trial6.csv")
-OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "Real6x6_heatmaps")
+INPUT_FILE = os.path.join(SCRIPT_DIR, "p.trial5.csv")
+OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, ".Real6x6_heatmaps")
 COLORMAP = "viridis"
-# Set to None to auto-scale per image; otherwise use fixed bounds
-VMIN = None
-VMAX = None
+VMIN = 0
+VMAX = 30
 
 
 def ensure_output_folder(path):
@@ -30,37 +26,39 @@ def ensure_output_folder(path):
 
 
 def load_all_matrices(csv_path):
-    matrices = []
-    with open(csv_path, 'r') as f:
-        # Skip header (remove this line if no header)
-        next(f)
-        for lineno, line in enumerate(f, start=2):
-            parts = line.rstrip('\n').split(',')
-            if len(parts) < 37:
-                print(f"Warning: skipping malformed row {lineno} ({len(parts)} cols)")
-                continue
-            try:
-                # ignore first column, parse cols 1–36
-                row = [float(x) for x in parts[1:37]]
-            except ValueError as e:
-                print(f"Warning: non-numeric at row {lineno}, skipping: {e}")
-                continue
-            matrices.append(row)
+    try:
+        # Read CSV, skip header row, treat all remaining rows as data
+        df = pd.read_csv(csv_path, skiprows=1, header=None)
+    except Exception as e:
+        raise RuntimeError(f"Error reading '{csv_path}': {e}")
 
-    if not matrices:
-        raise RuntimeError(f"No valid 6×6 rows found in '{csv_path}'")
-    return np.array(matrices)
+    # Expect at least one date column + 36 data columns
+    if df.shape[1] < 37:
+        raise ValueError(
+            f"Expected at least 37 columns (date + 36 data), got {df.shape[1]}"
+        )
+
+    # Drop the first (date) column and select the next 36 columns
+    data_df = df.iloc[:, 1:37]
+
+    # Ensure all remaining values are numeric
+    try:
+        numeric = data_df.apply(pd.to_numeric, errors='raise').values
+    except Exception as e:
+        raise RuntimeError(f"Error converting data to numeric: {e}")
+
+    return numeric
 
 
 def generate_heatmap(matrix, save_path):
-    # auto-scale unless VMIN/VMAX set
-    vmin = VMIN if VMIN is not None else matrix.min()
-    vmax = VMAX if VMAX is not None else matrix.max()
-
     fig, ax = plt.subplots(figsize=(2, 2), dpi=32)
-    ax.imshow(matrix, cmap=COLORMAP,
-              interpolation='nearest',
-              vmin=vmin, vmax=vmax)
+    ax.imshow(
+        matrix,
+        cmap=COLORMAP,
+        interpolation='nearest',
+        vmin=VMIN,
+        vmax=VMAX
+    )
     ax.axis('off')
     fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
     plt.close(fig)
@@ -79,8 +77,11 @@ def main():
         print(e)
         sys.exit(1)
 
+    # Multiply all values by 100
+    data *= 10
+
     for idx, row in enumerate(data, start=1):
-        # Reshape in column-major order so that CSV channels map correctly
+        # Reshape column-first so that heatmap[0, :] == [row[0], row[6], ...]
         matrix = row.reshape((6, 6), order='F')
         filename = f"entry_{idx:03d}.png"
         out_path = os.path.join(OUTPUT_FOLDER, filename)
