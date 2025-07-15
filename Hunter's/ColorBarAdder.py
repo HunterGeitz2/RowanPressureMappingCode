@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # ─── CONFIGURE THESE TWO VARIABLES ──────────────────────────────
 INPUT_FOLDER  = "TestRealActual32x32_heatmaps"               # set your source folder name here
-OUTPUT_FOLDER = "TestRealActual32x32_heatmaps_with_colorbar"  # set your destination folder name here
+OUTPUT_FOLDER = "TestRealActual32x32_heatmaps_with_smallcolorbar"  # set your destination folder name here
 # ─────────────────────────────────────────────────────────────────
 
 # Resolve paths relative to this script’s location
@@ -19,7 +20,8 @@ OUTPUT_PATH = os.path.join(BASE_DIR, OUTPUT_FOLDER)
 def add_colorbar_to_folder(input_path, output_path, vmin=0, vmax=150, cmap='viridis'):
     """
     For each PNG in input_path, load it, append a colorbar matching vmin–vmax
-    and cmap, and save into output_path under the same filename.
+    and cmap (with zero pad), and save into output_path under the same filename.
+    Uses an AxesDivider to place the bar flush against the image.
     """
     if not os.path.isdir(input_path):
         print(f"Error: input folder '{input_path}' not found.")
@@ -35,27 +37,23 @@ def add_colorbar_to_folder(input_path, output_path, vmin=0, vmax=150, cmap='viri
         # Load the image
         img = mpimg.imread(filepath)
 
-        # Create a figure with two subplots: image and colorbar, tightly spaced
-        fig, (ax_img, ax_cb) = plt.subplots(
-            ncols=2,
-            figsize=(8, 4),
-            gridspec_kw={'width_ratios': [20, 1], 'wspace': 0.01}
-        )
-        # Remove any extra margins
-        fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0.01)
-
-        # Show the image (no axes)
+        # Create a figure with a single image axis
+        fig, ax_img = plt.subplots(figsize=(8, 4))
         ax_img.imshow(img, origin='upper')
         ax_img.axis('off')
+
+        # Use AxesDivider to append a colorbar axis with zero pad
+        divider = make_axes_locatable(ax_img)
+        cax = divider.append_axes("right", size="5%", pad=0.0)
 
         # Build a dummy mappable to drive the colorbar
         norm = Normalize(vmin=vmin, vmax=vmax)
         mappable = ScalarMappable(norm=norm, cmap=cmap)
         mappable.set_array([])
 
-        # Draw the colorbar tightly next to the image
-        fig.colorbar(mappable, cax=ax_cb)
-        ax_cb.yaxis.tick_right()
+        # Draw the colorbar into that axis
+        cbar = fig.colorbar(mappable, cax=cax)
+        cax.yaxis.tick_right()
 
         # Save into the output folder with no padding
         filename = os.path.basename(filepath)
