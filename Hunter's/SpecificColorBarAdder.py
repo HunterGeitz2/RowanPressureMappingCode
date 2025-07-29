@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # ─── CONFIG ─────────────────────────────────────────────────────
 INPUT_FOLDER  = "TestRealActual32x32_heatmaps"
-OUTPUT_FOLDER = "TestRealActual32x32_heatmaps_with_specificsmallcolorbar"
+OUTPUT_FOLDER = "TestRealActual32x32_heatmaps_with_specificunitssmallcolorbar"
 CSV_FILENAME  = "32x32SyntheticData.csv"  # CSV in same directory as this script
 # ────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,10 @@ def add_colorbar_from_csv(input_path, output_path, csv_path, cmap='viridis'):
     df = pd.read_csv(csv_path)
     df.set_index('Frame', inplace=True)
 
+    # Ensure output directory exists
     os.makedirs(output_path, exist_ok=True)
+
+    # Process each PNG in sorted order
     for filepath in sorted(glob.glob(os.path.join(input_path, '*.png'))):
         filename = os.path.basename(filepath)
         stem = os.path.splitext(filename)[0]
@@ -35,33 +38,42 @@ def add_colorbar_from_csv(input_path, output_path, csv_path, cmap='viridis'):
             continue
         frame_num = int(m.group(1))
 
+        # Skip if no corresponding row in CSV
         if frame_num not in df.index:
             print(f"⚠️  No CSV row for frame {frame_num}; skipping '{filename}'")
             continue
 
-        # 3) Lookup your desired min/max
+        # 3) Lookup your desired vmin/vmax from the CSV
         row      = df.loc[frame_num]
         vmin_csv = row['Minimum Pressure (mmHg)']
         vmax_csv = row['Maximum Pressure (mmHg)']
 
-        # 4) Plot the image with those exact bounds
+        # 4) Load and plot the image with those exact bounds
         img = mpimg.imread(filepath)
-        fig, ax = plt.subplots(figsize=(8,4))
-        im = ax.imshow(img,
-                       origin='upper',
-                       cmap=cmap,
-                       vmin=vmin_csv,
-                       vmax=vmax_csv)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        im = ax.imshow(
+            img,
+            origin='upper',
+            cmap=cmap,
+            vmin=vmin_csv,
+            vmax=vmax_csv
+        )
         ax.axis('off')
 
         # 5) Append a tight colorbar and restrict ticks to endpoints
         divider = make_axes_locatable(ax)
         cax     = divider.append_axes("right", size="5%", pad=0.0)
         cbar    = fig.colorbar(im, cax=cax)
-        cbar.set_ticks([vmin_csv, vmax_csv])
+
+        # Restrict ticks to vmin and vmax, and append 'mmHg'
+        ticks = [vmin_csv, vmax_csv]
+        cbar.set_ticks(ticks)
+        cbar.set_ticklabels([f"{t:.2f} mmHg" for t in ticks])
+
+        # Move ticks to right side
         cax.yaxis.tick_right()
 
-        # 6) Save
+        # 6) Save the result
         out_path = os.path.join(output_path, filename)
         fig.savefig(out_path, bbox_inches='tight', pad_inches=0)
         plt.close(fig)
