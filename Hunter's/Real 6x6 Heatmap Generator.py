@@ -14,11 +14,9 @@ import matplotlib.pyplot as plt
 
 # Configuration
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(SCRIPT_DIR, "p.trial5.csv")
-OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, ".Real6x6_heatmaps")
+INPUT_FILE = os.path.join(SCRIPT_DIR, "p.trial10.csv")
+OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "p.trial10_heatmaps")
 COLORMAP = "viridis"
-VMIN = 0
-VMAX = 30
 
 
 def ensure_output_folder(path):
@@ -52,12 +50,11 @@ def load_all_matrices(csv_path):
 
 def generate_heatmap(matrix, save_path):
     fig, ax = plt.subplots(figsize=(2, 2), dpi=32)
+    # No vmin/vmax → auto-scale per matrix
     ax.imshow(
         matrix,
         cmap=COLORMAP,
-        interpolation='nearest',
-        vmin=VMIN,
-        vmax=VMAX
+        interpolation='nearest'
     )
     ax.axis('off')
     fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
