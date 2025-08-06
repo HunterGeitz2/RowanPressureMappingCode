@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Configuration (relative to SCRIPT_DIR)
-INPUT_FILE = os.path.join(SCRIPT_DIR, "f.trial1.csv")
-OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "f.trial1_heatmaps")
+INPUT_FILE = os.path.join(SCRIPT_DIR, "f.trial10.csv")
+OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "f.trial10_heatmaps")
 COLORMAP = "viridis"
 # Set to None to auto-scale per image; otherwise use fixed bounds
 VMIN = None

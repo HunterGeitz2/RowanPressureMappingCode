@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Script to generate 6×6 heatmap images for each row in `extracted_6x6_grids.csv`.
-Each row (after stripping the date column) is multiplied by 100, reshaped
-column-first into a 6×6 matrix, and saved as a PNG heatmap.
+Script to generate 6×6 heatmap images for each row in `p.trialX.csv` files.
+For trials 1 through 10, each row (after stripping the date column) is reshaped
+row-first into a 6×6 matrix (so values 0–5 fill the first row, 6–11 the second, etc.),
+and saved as a PNG heatmap.
 """
 import os
 import sys
@@ -13,10 +14,9 @@ matplotlib.use('Agg')  # Use non-GUI backend
 import matplotlib.pyplot as plt
 
 # Configuration
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_FILE = os.path.join(SCRIPT_DIR, "p.trial10.csv")
-OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "p.trial10_heatmaps")
-COLORMAP = "viridis"
+SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+TRIAL_RANGE  = range(1, 11)  # trials 1 through 10
+COLORMAP     = "viridis"
 
 
 def ensure_output_folder(path):
@@ -50,7 +50,6 @@ def load_all_matrices(csv_path):
 
 def generate_heatmap(matrix, save_path):
     fig, ax = plt.subplots(figsize=(2, 2), dpi=32)
-    # No vmin/vmax → auto-scale per matrix
     ax.imshow(
         matrix,
         cmap=COLORMAP,
@@ -61,29 +60,33 @@ def generate_heatmap(matrix, save_path):
     plt.close(fig)
 
 
-def main():
-    ensure_output_folder(OUTPUT_FOLDER)
+def process_trial(trial_num):
+    input_file = os.path.join(SCRIPT_DIR, f"p.trial{trial_num}.csv")
+    output_folder = os.path.join(SCRIPT_DIR, f"p.trial{trial_num}_heatmaps")
+    ensure_output_folder(output_folder)
 
-    if not os.path.exists(INPUT_FILE):
-        print(f"Error: Input file '{INPUT_FILE}' not found.")
-        sys.exit(1)
+    if not os.path.exists(input_file):
+        print(f"Warning: '{input_file}' not found. Skipping trial {trial_num}.")
+        return
 
     try:
-        data = load_all_matrices(INPUT_FILE)
+        data = load_all_matrices(input_file)
     except Exception as e:
-        print(e)
-        sys.exit(1)
-
-    # Multiply all values by 100
-    data *= 10
+        print(f"Error loading trial {trial_num}: {e}")
+        return
 
     for idx, row in enumerate(data, start=1):
-        # Reshape column-first so that heatmap[0, :] == [row[0], row[6], ...]
-        matrix = row.reshape((6, 6), order='F')
+        # Reshape row-first: 0–5 → row 0, 6–11 → row 1, etc.
+        matrix = row.reshape((6, 6), order='C')
         filename = f"entry_{idx:03d}.png"
-        out_path = os.path.join(OUTPUT_FOLDER, filename)
+        out_path = os.path.join(output_folder, filename)
         generate_heatmap(matrix, out_path)
-        print(f"Saved heatmap for entry {idx} to '{out_path}'")
+        print(f"Saved heatmap for trial {trial_num}, entry {idx} to '{out_path}'")
+
+
+def main():
+    for trial in TRIAL_RANGE:
+        process_trial(trial)
 
 
 if __name__ == "__main__":
